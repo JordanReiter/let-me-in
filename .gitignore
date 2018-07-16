@@ -1,0 +1,14 @@
+.env
+*,cover
+.coverage
+__pycache__
+*.pyc
+lib
+include
+.pytest_cache
+pip-selfcheck.json
+*.log
+bin
+*~
+*~
+.tox

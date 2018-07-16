@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block heading %}
+	<h1>{% block title %}{% if request.method == 'POST' %}Access Granted{% else %}Add Access for {{ ip }}{% endif %}{% endblock title %}</h1>
+{% endblock heading %}
+
+{% block content %}
+{% if request.method != 'POST' %}
+<form class="container form" method="POST" action="{{ PREFIX }}/knock/">
+	<button class="btn btn-primary" type="submit">Add access for {{ ip }}</button>
+</form>
+{% else %}
+<p>You can now access this server from {{ ip }}  by ssh.</p>
+<p>When done, please remove this IP by going to <a href='{{ PREFIX }}/bye/'>{{ PREFIX }}/bye/</a></p>
+{% endif %}
+{% endblock content %}

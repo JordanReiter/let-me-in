@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
+	<title>{% block title %}{% endblock %} - {{ app_name }}</title>
+
+  </head>
+
+  <body>
+
+	<nav class="navbar navbar-expand-md navbar-dark bg-dark">
+		<a class="navbar-brand" href="#">{{ app_name }}</a>
+		{% if user %}
+		<ul class="navbar-nav ml-auto">
+			<li class="nav-item"><div class="navbar-text">Signed in as <span>{{ user }}</span></div</li>
+			<li class="nav-item"><a class="nav-link" href="{{ url_for('cas.logout') }}?{{ return_var }}={{ request.url }}">Log Out</a></li>
+		</ul>
+	{% endif %}
+  </ul>
+	
+
+	</nav>
+
+	<main role="main" class="container">
+
+		<header>{% block header %}{% endblock %}</header>
+		{% block content %}{% endblock %}
+
+	</main><!-- /.container -->
+
+  </body>
+</html>
+
+
+
+

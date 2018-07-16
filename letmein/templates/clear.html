@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block heading %}<h1>{% block title %}{% if request.method == 'POST' %}IPs Cleared{% else %}Confirm: Clear All IPs{% endif %}{% endblock title %}</h1>{% endblock heading %}
+
+{% block content %}
+{% if request.method != 'POST' %}
+<form class="form container" method="POST" action="{{ PREFIX }}/clear/">
+<p>Are you sure you want to clear all IPs? This will block access to all IP addresses that currently can get ssh.</p>
+<button class="btn btn-primary" type="submit"><big><strong>Yes</strong></big>, clear all IPs</button>
+<a class="btn btn-danger" href="{{ cancel_url }}"><big><strong>No</strong></big>, keep IPs</a>
+</form>
+{% else %}
+<p>A total of {{ cleared }} IPs were removed.</p>
+{% endif %}
+{% endblock content %}

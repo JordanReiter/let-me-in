@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block heading %}<h1>{% block title %}Confirm: Clear All IPs{% endblock title %}</h1>{% endblock heading %}
+
+{% block content %}
+<form class="form container" method="POST" action="{{ PREFIX }}/clear/">
+<p>Are you sure you want to clear all IPs? This will block access to all IP addresses that currently can get ssh.</p>
+<button class="btn btn-primary" type="submit"><big><strong>Yes</strong></big>, clear all IPs</button>
+<a class="btn btn-danger" href="{{ cancel_url }}"><big><strong>No</strong></big>, keep IPs</a>
+</form>
+{% endblock content %}

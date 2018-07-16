@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block heading %}<h1>{% block title %}Hello{% endblock title %}</h1>{% endblock heading %}
+
+{% block content %}
+<form method="POST" action="{{ PREFIX }}/knock/">
+	<button type="submit">Add access for {{ ip }}</button>
+</form>
+<form method="POST" action="{{ PREFIX }}/clear/">
+	<button type="submit">Remove access for all IPs</button>
+</form>
+{% endblock content %}
