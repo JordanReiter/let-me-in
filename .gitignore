@@ -12,3 +12,5 @@ bin
 *~
 *~
 .tox
+lib64
+src

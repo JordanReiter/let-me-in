@@ -348,7 +348,7 @@ class TestServer(ManageIPMixin, FlashTestingMixin, TestCase):
             location = re.sub(r'https?://[^/]+', '', response.headers['Location'])
             self.assertEqual('/goodbye/', location)
             self.assertFlashes(client, 'Your IP address was not removed. Please try again.', 'warning')
-            
+
 
     def test_post_knock_logged_in_access_group_clear(self):
         ips = ['11.22.33.44', '22.44.66.88', '11.33.66.99']

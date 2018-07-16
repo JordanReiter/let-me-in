@@ -18,7 +18,7 @@ class TestUtils(ManageIPMixin, TestCase):
         self.assertEqual(
             self.target_security_group,
             get_group(self.target_security_group.group_name)
-        )        
+        )
 
     def test_get_group_nonexistent(self):
         with self.assertRaises(RuntimeError):

@@ -31,20 +31,39 @@ def remove_ip(group, ip, port=22, protocol='tcp'):
         IpPermissions=perms
     )
 
-def clear_ips(group, port=22, protocol='tcp'):
+def get_group(group, client=None, resource=None):
     try:
         group = group.group_name
     except AttributeError:
         pass
-    ec2 = boto3.client('ec2', region_name=AWS_REGION)
-    ec2r = boto3.resource('ec2', region_name=AWS_REGION)
+    ec2 = client or boto3.client('ec2', region_name=AWS_REGION)
+    ec2r = resource or boto3.resource('ec2', region_name=AWS_REGION)
     GroupId = None
     for group_data in ec2.describe_security_groups()['SecurityGroups']:
         if group_data['GroupName'] == group:
             GroupId = group_data['GroupId']
     if not GroupId:
         raise RuntimeError("Invalid security group name. {} not found.".format(group))
-    security_group = ec2r.SecurityGroup(GroupId)
+    return ec2r.SecurityGroup(GroupId)
+
+def ip_is_in_group(group, ip_to_find, port=22, protocol='tcp'):
+    security_group = get_group(group)
+    perms = copy.deepcopy(security_group.ip_permissions)
+    for perm in perms:
+        if perm['ToPort'] != port or perm['FromPort'] != port:
+            continue
+        for range in perm['IpRanges']:
+            ip = range.get('CidrIp', "")
+            if not ip.endswith('/32'):
+                continue
+            if ip_to_find == ip.split('/')[0]:
+                return True
+    return False
+
+def clear_ips(group, port=22, protocol='tcp'):
+    ec2 = boto3.client('ec2', region_name=AWS_REGION)
+    ec2r = boto3.resource('ec2', region_name=AWS_REGION)
+    security_group = get_group(group, client=ec2, resource=ec2r)
     perms = copy.deepcopy(security_group.ip_permissions)
     clear_perms = []
     cleared_ips = []
