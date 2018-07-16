@@ -16,7 +16,7 @@ docker==3.3.0
 docker-pycreds==0.3.0
 docutils==0.14
 Flask==1.0.2
-Flask-CAS==1.0.0
+-e git+https://github.com/JordanReiter/Flask-CAS.git@fixes#egg=Flask_CAS
 idna==2.6
 itsdangerous==0.24
 Jinja2==2.10
