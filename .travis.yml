@@ -4,6 +4,8 @@ python:
   - "2.7"
   - "3.4"
   - "3.6"
+env:
+  - SECRET_KEY='test_secret_key' CAS_SERVER='https://test.example.org/' GROUPS_WITH_ACCESS='Dev' GROUPS_WITH_ADMIN='Admin' SECURITY_GROUP='letmein-test' AUTH_BACKEND='auth.backends.cas.CASAuth' RETURN_VAR='next'
 install:
   - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then pip install mock; fi
   - pip install -U pip
