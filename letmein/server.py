@@ -8,8 +8,8 @@ import json
 import datetime
 import re
 
-from flask import Flask, Response, abort, request, render_template
-import flask_cas
+import flask
+from flask import Flask, Response, abort, request, render_template, redirect, flash
 
 import os
 
@@ -35,7 +35,7 @@ RETURN_VAR = os.environ.get('RETURN_VAR') or 'return'
 ACCESS_GROUPS = os.environ.get('GROUPS_WITH_ACCESS', '').split(",")
 ADMIN_GROUPS = os.environ.get('GROUPS_WITH_ADMIN', '').split(",")
 
-from .utils import add_ip, clear_ips, remove_ip
+from .utils import add_ip, clear_ips, remove_ip, ip_is_in_group
 
 SecurityGroupRule = collections.namedtuple("SecurityGroupRule", ["ip_protocol", "from_port", "to_port", "cidr_ip", "src_group_name"])
 
@@ -44,12 +44,13 @@ def global_variables():
     return dict(
         logout_url=auth.logout_url,
         app_name=APP_NAME,
-        PREFIX=request.headers.get('X-Script-Name', ''),
+        PREFIX=flask.request.script_root,
         return_var=RETURN_VAR,
+        user=auth.user,
     )
 
 @app.route('/knock/', methods=['GET', 'POST'])
-@flask_cas.login_required
+@auth.login_required
 def knock():
     if not auth.has_access(check_groups=ACCESS_GROUPS + ADMIN_GROUPS):
         return Response( "Not allowed.", status=403, mimetype="text/plain")
@@ -57,10 +58,21 @@ def knock():
     if request.method != 'POST':
         return render_template('knock.html', user=auth.user, cancel_url=CANCEL_URL,  ip=ip_address)
     add_ip(SECURITY_GROUP, ip_address)
-    return render_template('knock.html', user=auth.user, ip=ip_address)
+    return redirect(flask.request.script_root + '/knocked/')
+
+@app.route('/knocked/', methods=['GET'])
+@auth.login_required
+def knocked():
+    if not auth.has_access(check_groups=ACCESS_GROUPS + ADMIN_GROUPS):
+        return Response( "Not allowed.", status=403, mimetype="text/plain")
+    ip_address = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
+    if not ip_is_in_group(SECURITY_GROUP, ip_address):
+        flash('Your IP address was not added. Please try again.', 'warning')
+        return redirect(flask.request.script_root + '/knock/')
+    return render_template('knocked.html', user=auth.user, ip=ip_address)
 
 @app.route('/', methods=['GET'])
-@flask_cas.login_required
+@auth.login_required
 def hello():
     if not auth.has_access(check_groups=ACCESS_GROUPS + ADMIN_GROUPS):
         return Response( "Not allowed.", status=403, mimetype="text/plain")
@@ -69,7 +81,7 @@ def hello():
 
 @app.route('/goodbye/', methods=['GET', 'POST'])
 @app.route('/bye/', methods=['GET', 'POST'])
-@flask_cas.login_required
+@auth.login_required
 def goodbye():
     if not auth.has_access(check_groups=ACCESS_GROUPS + ADMIN_GROUPS):
         return Response( "Not allowed.", status=403, mimetype="text/plain")
@@ -77,7 +89,18 @@ def goodbye():
     if request.method != 'POST':
         return render_template('goodbye.html', user=auth.user, cancel_url=CANCEL_URL, ip=ip_address)
     remove_ip(SECURITY_GROUP, ip_address)
-    return render_template('goodbye.html', user=auth.user, ip=ip_address)
+    return redirect(flask.request.script_root + '/left/')
+
+@app.route('/left/', methods=['GET'])
+@auth.login_required
+def left():
+    if not auth.has_access(check_groups=ACCESS_GROUPS + ADMIN_GROUPS):
+        return Response( "Not allowed.", status=403, mimetype="text/plain")
+    ip_address = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
+    if ip_is_in_group(SECURITY_GROUP, ip_address):
+        flash('Your IP address was not removed. Please try again.', 'warning')
+        return redirect(flask.request.script_root + '/goodbye/')
+    return render_template('left.html', user=auth.user, ip=ip_address)
 
 @app.route('/clear/', methods=['GET', 'POST'])
 @auth.login_required
@@ -87,6 +110,17 @@ def clearall():
     if request.method != 'POST':
         return render_template('clear-confirm.html', user=auth.user, cancel_url=CANCEL_URL)
     ip_count = len(clear_ips(SECURITY_GROUP))
+    return redirect(flask.request.script_root + '/cleared/?count={}'.format(ip_count))
+
+@app.route('/cleared/', methods=['GET'])
+@auth.login_required
+def cleared():
+    if not auth.has_access(check_groups=ACCESS_GROUPS + ADMIN_GROUPS):
+        return Response( "Not allowed.", status=403, mimetype="text/plain")
+    ip_count=request.args.get('count')
+    if not ip_count:
+        flash('No IP addresses were cleared. Please try again.', 'warning')
+        return redirect(flask.request.script_root + '/clear/')
     return render_template('cleared.html', user=auth.user, cleared=ip_count)
 
 

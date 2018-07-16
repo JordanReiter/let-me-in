@@ -5,6 +5,20 @@ import boto3
 TEST_SECURITY_GROUP_DESC = "SSH Users"
 TEST_SECURITY_GROUP_NAME = 'ssh-users'
 
+
+class FlashTestingMixin(object):
+    # credit Paulo Poiati
+    # http://blog.paulopoiati.com/2013/02/22/testing-flash-messages-in-flask/
+    def assertFlashes(self, client, expected_message, expected_category='message'):
+        with client.session_transaction() as session:
+            try:
+                category, message = session['_flashes'][0]
+            except KeyError:
+                raise AssertionError('nothing flashed')
+        self.assertIn(expected_message, message, msg="Flash did not contain expected content.")
+        self.assertEqual(expected_category, category, msg="Flash category did not match expected category.")
+
+
 class ManageIPMixin(object):
     def setUp(self):
         super(ManageIPMixin, self).setUp()

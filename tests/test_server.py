@@ -1,4 +1,5 @@
 import os
+import re
 import tempfile
 from unittest import TestCase
 
@@ -6,7 +7,8 @@ import boto3
 from moto import mock_ec2
 import pytest
 
-from .base import TEST_REGION, ManageIPMixin, TEST_SECURITY_GROUP_DESC, TEST_SECURITY_GROUP_NAME
+from .base import TEST_REGION, ManageIPMixin, FlashTestingMixin, \
+    TEST_SECURITY_GROUP_DESC, TEST_SECURITY_GROUP_NAME
 
 TEST_ACCESS_GROUP = 'test-user-has-access'
 TEST_ADMIN_GROUP = 'test-user-as-admin'
@@ -23,7 +25,7 @@ import letmein.server
 PRESERVE_CONTEXT_ON_EXCEPTION = False
 
 @mock_ec2
-class TestServer(ManageIPMixin, TestCase):
+class TestServer(ManageIPMixin, FlashTestingMixin, TestCase):
 
     @classmethod
     def setUpClass(self):
@@ -62,6 +64,14 @@ class TestServer(ManageIPMixin, TestCase):
                 302
             )
 
+    def test_get_knocked_not_logged_in(self):
+        with self.app.test_client() as client:
+            response = client.get('/knocked/')
+            self.assertEqual(
+                response.status_code,
+                302
+            )
+
     def test_get_goodbye_not_logged_in(self):
         with self.app.test_client() as client:
             response = client.get('/goodbye/')
@@ -70,9 +80,25 @@ class TestServer(ManageIPMixin, TestCase):
                 302
             )
 
+    def test_get_left_not_logged_in(self):
+        with self.app.test_client() as client:
+            response = client.get('/left/')
+            self.assertEqual(
+                response.status_code,
+                302
+            )
+
     def test_get_clear_not_logged_in(self):
         with self.app.test_client() as client:
             response = client.get('/clear/')
+            self.assertEqual(
+                response.status_code,
+                302
+            )
+
+    def test_get_cleared_not_logged_in(self):
+        with self.app.test_client() as client:
+            response = client.get('/cleared/')
             self.assertEqual(
                 response.status_code,
                 302
@@ -89,6 +115,16 @@ class TestServer(ManageIPMixin, TestCase):
                 403
             )
 
+    def test_get_knocked_logged_in_no_group(self):
+        with self.app.test_client() as client:
+            with client.session_transaction() as session:
+                session['CAS_USERNAME'] = 'test-user'
+            response = client.get('/knocked/')
+            self.assertEqual(
+                response.status_code,
+                403
+            )
+
     def test_get_knock_logged_in_bad_group(self):
         with self.app.test_client() as client:
             with client.session_transaction() as session:
@@ -100,6 +136,16 @@ class TestServer(ManageIPMixin, TestCase):
                 403
             )
 
+    def test_get_knocked_logged_in_bad_group(self):
+        with self.app.test_client() as client:
+            with client.session_transaction() as session:
+                session['CAS_USERNAME'] = 'test-user'
+                session['cas-attributes'] = { 'cas:memberOf': ['wrong-group'] }
+            response = client.get('/knocked/')
+            self.assertEqual(
+                response.status_code,
+                403
+            )
 
     def test_get_goodbye_logged_in_no_group(self):
         with self.app.test_client() as client:
@@ -111,12 +157,33 @@ class TestServer(ManageIPMixin, TestCase):
                 403
             )
 
+    def test_get_left_logged_in_no_group(self):
+        with self.app.test_client() as client:
+            with client.session_transaction() as session:
+                session['CAS_USERNAME'] = 'test-user'
+            response = client.get('/left/')
+            self.assertEqual(
+                response.status_code,
+                403
+            )
+
     def test_get_goodbye_logged_in_bad_group(self):
         with self.app.test_client() as client:
             with client.session_transaction() as session:
                 session['CAS_USERNAME'] = 'test-user'
                 session['cas-attributes'] = { 'cas:memberOf': ['wrong-group'] }
             response = client.get('/goodbye/')
+            self.assertEqual(
+                response.status_code,
+                403
+            )
+
+    def test_get_left_logged_in_bad_group(self):
+        with self.app.test_client() as client:
+            with client.session_transaction() as session:
+                session['CAS_USERNAME'] = 'test-user'
+                session['cas-attributes'] = { 'cas:memberOf': ['wrong-group'] }
+            response = client.get('/left/')
             self.assertEqual(
                 response.status_code,
                 403
@@ -154,12 +221,33 @@ class TestServer(ManageIPMixin, TestCase):
                 403
             )
 
+    def test_get_cleared_logged_in_no_group(self):
+        with self.app.test_client() as client:
+            with client.session_transaction() as session:
+                session['CAS_USERNAME'] = 'test-user'
+            response = client.get('/cleared/')
+            self.assertEqual(
+                response.status_code,
+                403
+            )
+
     def test_get_clear_logged_in_bad_group(self):
         with self.app.test_client() as client:
             with client.session_transaction() as session:
                 session['CAS_USERNAME'] = 'test-user'
                 session['cas-attributes'] = { 'cas:memberOf': ['wrong-group'] }
             response = client.get('/clear/')
+            self.assertEqual(
+                response.status_code,
+                403
+            )
+
+    def test_get_cleared_logged_in_bad_group(self):
+        with self.app.test_client() as client:
+            with client.session_transaction() as session:
+                session['CAS_USERNAME'] = 'test-user'
+                session['cas-attributes'] = { 'cas:memberOf': ['wrong-group'] }
+            response = client.get('/cleared/')
             self.assertEqual(
                 response.status_code,
                 403
@@ -174,13 +262,31 @@ class TestServer(ManageIPMixin, TestCase):
             response = client.post('/knock/', environ_base={'REMOTE_ADDR': ip_to_add})
             self.assertEqual(
                 response.status_code,
-                200
+                302
             )
+            location = re.sub(r'https?://[^/]+', '', response.headers['Location'])
+            self.assertEqual('/knocked/', location)
+            redir_response = client.get(location, environ_base={'REMOTE_ADDR': ip_to_add})
             self.assertTrue(self.group_contains_ip(self.target_security_group, ip_to_add))
             self.assertIn(
                 "You can now access this server from {} by ssh.".format(ip_to_add),
-                ' '.join(response.data.decode().split())
+                ' '.join(redir_response.data.decode().split())
             )
+
+    def test_get_knocked_not_actually_knocked(self):
+        ip_to_add = '12.34.56.78'
+        with self.app.test_client() as client:
+            with client.session_transaction() as session:
+                session['CAS_USERNAME'] = 'test-user'
+                session['cas-attributes'] = { 'cas:memberOf': [TEST_ACCESS_GROUP] }
+            response = client.get('/knocked/', environ_base={'REMOTE_ADDR': ip_to_add})
+            self.assertEqual(
+                response.status_code,
+                302
+            )
+            location = re.sub(r'https?://[^/]+', '', response.headers['Location'])
+            self.assertEqual('/knock/', location)
+            self.assertFlashes(client, 'Your IP address was not added. Please try again.', 'warning')
 
 
     def test_post_knock_logged_in_access_group_remove(self):
@@ -195,7 +301,7 @@ class TestServer(ManageIPMixin, TestCase):
                 response = client.post('/knock/', environ_base={'REMOTE_ADDR': ip_to_add})
                 self.assertEqual(
                     response.status_code,
-                    200
+                    302
                 )
             self.assertTrue(all(
                 self.group_contains_ip(self.target_security_group, ip_to_add)
@@ -204,10 +310,45 @@ class TestServer(ManageIPMixin, TestCase):
             response = client.post('/goodbye/', environ_base={'REMOTE_ADDR': ip_to_remove})
             self.assertEqual(
                 response.status_code,
-                200
+                302
             )
+            location = re.sub(r'https?://[^/]+', '', response.headers['Location'])
+            self.assertEqual('/left/', location)
             self.assertTrue(self.group_contains_ip(self.target_security_group, ip_to_keep))
             self.assertFalse(self.group_contains_ip(self.target_security_group, ip_to_remove))
+            redir_response = client.get(location, environ_base={'REMOTE_ADDR': ip_to_remove})
+            self.assertIn(
+                'SSH Access for {} has been removed.'.format(ip_to_remove),
+                ' '.join(redir_response.data.decode().split())
+            )
+
+    def test_get_left_not_actually_left(self):
+        ip_to_keep = '11.22.33.44'
+        ip_to_remove = '99.88.77.66'
+        ips_to_add = [ ip_to_keep, ip_to_remove ]
+        with self.app.test_client() as client:
+            with client.session_transaction() as session:
+                session['CAS_USERNAME'] = 'test-user'
+                session['cas-attributes'] = { 'cas:memberOf': [TEST_ACCESS_GROUP] }
+            for ip_to_add in ips_to_add:
+                response = client.post('/knock/', environ_base={'REMOTE_ADDR': ip_to_add})
+                self.assertEqual(
+                    response.status_code,
+                    302
+                )
+            self.assertTrue(all(
+                self.group_contains_ip(self.target_security_group, ip_to_add)
+                for ip_to_add in ips_to_add
+            ))
+            response = client.get('/left/', environ_base={'REMOTE_ADDR': ip_to_remove})
+            self.assertEqual(
+                response.status_code,
+                302
+            )
+            location = re.sub(r'https?://[^/]+', '', response.headers['Location'])
+            self.assertEqual('/goodbye/', location)
+            self.assertFlashes(client, 'Your IP address was not removed. Please try again.', 'warning')
+            
 
     def test_post_knock_logged_in_access_group_clear(self):
         ips = ['11.22.33.44', '22.44.66.88', '11.33.66.99']
@@ -219,20 +360,36 @@ class TestServer(ManageIPMixin, TestCase):
             response = client.post('/clear/', environ_base={'REMOTE_ADDR': ips[0]})
             self.assertEqual(
                 response.status_code,
-                200
+                302
             )
+            location = re.sub(r'https?://[^/]+', '', response.headers['Location'])
+            self.assertEqual('/cleared/?count=3', location)
             self.assertFalse(
                 any(
                     self.group_contains_ip(self.target_security_group, ip)
                     for ip in ips
                 )
             )
+            redir_response = client.get(location, environ_base={'REMOTE_ADDR': ips[0]})
             self.assertIn(
                 'A total of {} IPs were removed.'.format(len(ips)),
-                ' '.join(response.data.decode().split())
+                ' '.join(redir_response.data.decode().split())
             )
 
-
+    def test_get_cleared_not_actually_cleared(self):
+        ip = '12.34.56.78'
+        with self.app.test_client() as client:
+            with client.session_transaction() as session:
+                session['CAS_USERNAME'] = 'test-user'
+                session['cas-attributes'] = { 'cas:memberOf': [TEST_ADMIN_GROUP] }
+            response = client.get('/cleared/', environ_base={'REMOTE_ADDR': ip})
+            self.assertEqual(
+                response.status_code,
+                302
+            )
+            location = re.sub(r'https?://[^/]+', '', response.headers['Location'])
+            self.assertEqual('/clear/', location)
+            self.assertFlashes(client, 'No IP addresses were cleared. Please try again.', 'warning')
 
 
     def test_get_knock_logged_in_access_group(self):

@@ -6,13 +6,25 @@ try:
 except ImportError:
     import mock
 
+from botocore.exceptions import ClientError
 from moto import mock_ec2
 
-from letmein.utils import remove_ip, clear_ips, add_ip
+from letmein.utils import remove_ip, clear_ips, add_ip, get_group, ip_is_in_group
 from .base import TEST_REGION, ManageIPMixin
 
 @mock_ec2
 class TestUtils(ManageIPMixin, TestCase):
+    def test_get_group(self):
+        self.assertEqual(
+            self.target_security_group,
+            get_group(self.target_security_group.group_name)
+        )        
+
+    def test_get_group_nonexistent(self):
+        with self.assertRaises(RuntimeError):
+            get_group('Nonexistent-Group-Name')
+
+
     def test_remove_ip(self):
         ips_to_keep = [
             '1.2.3.4',
@@ -38,6 +50,54 @@ class TestUtils(ManageIPMixin, TestCase):
         for ip in ips_to_keep:
             self.assertTrue(self.group_contains_ip(self.target_security_group, ip))
         self.assertFalse(self.group_contains_ip(self.target_security_group, ip_to_remove))
+
+    def test_ip_is_in_group(self):
+        normal_ips = [
+            '1.2.3.4',
+            '1.2.3.5',
+        ]
+        ip_to_check = '12.34.56.78'
+        self.add_ips(self.target_security_group, normal_ips + [ip_to_check])
+        self.assertTrue(self.group_contains_ip(self.target_security_group, ip_to_check))
+        self.assertTrue(ip_is_in_group(self.target_security_group, ip_to_check))
+
+    def test_is_not_in_group(self):
+        normal_ips = [
+            '1.2.3.4',
+            '1.2.3.5',
+        ]
+        ip_to_check = '12.34.56.78'
+        self.add_ips(self.target_security_group, normal_ips)
+        self.assertFalse(self.group_contains_ip(self.target_security_group, ip_to_check))
+        self.assertFalse(ip_is_in_group(self.target_security_group, ip_to_check))
+
+    def test_is_not_in_group_ignore_ranges(self):
+        normal_ips = [
+            '1.2.3.4',
+            '1.2.3.5',
+        ]
+        ip_to_check = '12.34.56.78'
+        ignore_ranges = [
+            '{}/24'.format(ip_to_check),
+        ]
+        self.add_ips(self.target_security_group, normal_ips + ignore_ranges)
+        self.assertFalse(self.group_contains_ip(self.target_security_group, ip_to_check))
+        self.assertFalse(ip_is_in_group(self.target_security_group, ip_to_check))
+
+    def test_is_not_in_group_ignore_ports(self):
+        normal_ips = [
+            '1.2.3.4',
+            '1.2.3.5',
+        ]
+        ip_to_check = '111.222.33.88'
+        ignore_ports = [
+            ip_to_check
+        ]
+        self.add_ips(self.target_security_group, normal_ips)
+        self.add_ips(self.target_security_group, ignore_ports, to_port=80)
+        self.add_ips(self.target_security_group, ignore_ports, from_port=80)
+        self.assertTrue(self.group_contains_ip(self.target_security_group, ip_to_check))
+        self.assertFalse(ip_is_in_group(self.target_security_group, ip_to_check))
 
     def test_clear_ips(self):
         all_ips = [
@@ -171,10 +231,27 @@ class TestUtils(ManageIPMixin, TestCase):
         self.assertTrue(self.group_contains_ip(self.target_security_group, ip_to_add))
         self.assertFalse(self.group_contains_ip(self.admin_security_group, ip_to_add))
 
+    def test_add_ip_bad_ip(self):
+        ip_to_add = '123.45.67.899'
+        with self.assertRaises(ClientError):
+            add_ip(self.target_security_group, ip_to_add)
+
     def test_add_ip_name(self):
         ip_to_add = '123.45.67.89'
         add_ip(self.target_security_group.group_name, ip_to_add)
         self.target_security_group.reload()
         self.admin_security_group.reload()
+        self.assertTrue(self.group_contains_ip(self.target_security_group, ip_to_add))
+        self.assertFalse(self.group_contains_ip(self.admin_security_group, ip_to_add))
+
+    def test_add_ip_dont_add_twicee(self):
+        ip_to_add = '123.45.67.89'
+        add_ip(self.target_security_group.group_name, ip_to_add)
+        self.target_security_group.reload()
+        self.admin_security_group.reload()
+        self.assertTrue(self.group_contains_ip(self.target_security_group, ip_to_add))
+        self.assertFalse(self.group_contains_ip(self.admin_security_group, ip_to_add))
+        # now add the same IP a second time
+        add_ip(self.target_security_group.group_name, ip_to_add)
         self.assertTrue(self.group_contains_ip(self.target_security_group, ip_to_add))
         self.assertFalse(self.group_contains_ip(self.admin_security_group, ip_to_add))

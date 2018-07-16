@@ -1,13 +1,9 @@
 {% extends "base.html" %}
 
-{% block heading %}<h1>{% block title %}{% if request.method == 'POST' %}Access Removed{% else %}Remove Access for {{ ip }}{% endif %}{% endblock title %}</h1>{% endblock heading %}
+{% block heading %}<h1>{% block title %}Remove Access for {{ ip }}{% endblock title %}</h1>{% endblock heading %}
 
 {% block content %}
-{% if request.method != 'POST' %}
 <form class="container form" method="POST" action="{{ PREFIX }}/goodbye/">
 	<button class="btn btn-primary" type="submit">Remove access for {{ ip }}</button>
 </form>
-{% else %}
-<p>SSH Access for {{ ip }} has been removed.</p>
-{% endif %}
 {% endblock content %}

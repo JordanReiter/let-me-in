@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block heading %}
+	<h1>{% block title %}Access Granted{% endblock title %}</h1>
+{% endblock heading %}
+
+{% block content %}
+<p>You can now access this server from {{ ip }}  by ssh.</p>
+<p>When done, please remove this IP by going to <a href='{{ PREFIX }}/bye/'>{{ PREFIX }}/bye/</a></p>
+{% endblock content %}

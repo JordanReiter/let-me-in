@@ -4,9 +4,10 @@
 
 {% block content %}
 <form method="POST" action="{{ PREFIX }}/knock/">
-	<button type="submit">Add access for {{ ip }}</button>
+	<p><button class="btn btn-success" type="submit">Add access for {{ ip }}</button></p>
 </form>
+
 <form method="POST" action="{{ PREFIX }}/clear/">
-	<button type="submit">Remove access for all IPs</button>
+	<p><button class="btn btn-danger" type="submit">Remove access for all IPs</button></p>
 </form>
 {% endblock content %}

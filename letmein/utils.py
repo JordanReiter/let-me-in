@@ -2,6 +2,7 @@ import os
 import copy
 
 import boto3
+from botocore.exceptions import ClientError
 
 APP_NAME = os.environ.get('APP_NAME') or 'AWS Log In'
 AWS_REGION = os.environ.get('AWS_REGION') or 'us-east-1'
@@ -74,15 +75,18 @@ def add_ip(group, ip, port=22, protocol='tcp'):
     ec2 = boto3.client('ec2', region_name=AWS_REGION)
     if '/' not in ip:
         ip += '/32'
-    ec2.authorize_security_group_ingress(
-        GroupName=group,
-        IpPermissions = [{
-            'IpProtocol': protocol,
-            'FromPort': port,
-            'ToPort': port,
-            'IpRanges': [{
-                'CidrIp': ip
+    try:
+        ec2.authorize_security_group_ingress(
+            GroupName=group,
+            IpPermissions = [{
+                'IpProtocol': protocol,
+                'FromPort': port,
+                'ToPort': port,
+                'IpRanges': [{
+                    'CidrIp': ip
+                }]
             }]
-        }]
-    )
-
+        )
+    except ClientError as err:
+        if 'exists' not in str(err):
+            raise
