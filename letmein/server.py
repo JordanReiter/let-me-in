@@ -24,7 +24,6 @@ from .auth import Auth
 auth = Auth(app)
 
 
-import boto
 import collections
 
 SECURITY_GROUP = os.environ.get('SECURITY_GROUP', '')
