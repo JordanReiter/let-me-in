@@ -50,9 +50,9 @@ def ip_is_in_group(group, ip_to_find, port=22, protocol='tcp'):
     security_group = get_group(group)
     perms = copy.deepcopy(security_group.ip_permissions)
     for perm in perms:
-        if perm['ToPort'] != port or perm['FromPort'] != port:
+        if perm.get('ToPort') != port or perm.get('FromPort') != port:
             continue
-        for range in perm['IpRanges']:
+        for range in perm.get('IpRanges', []):
             ip = range.get('CidrIp', "")
             if not ip.endswith('/32'):
                 continue
@@ -68,9 +68,9 @@ def clear_ips(group, port=22, protocol='tcp'):
     clear_perms = []
     cleared_ips = []
     for perm in perms:
-        if perm['ToPort'] != port or perm['FromPort'] != port:
+        if perm.get('ToPort') != port or perm.get('FromPort') != port:
             continue
-        for range in perm['IpRanges']:
+        for range in perm.get('IpRanges', []):
             ip = range.get('CidrIp', "")
             if not ip.endswith('/32'):
                 perm['IpRanges'].remove(range)

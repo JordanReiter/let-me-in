@@ -61,6 +61,15 @@ class TestUtils(ManageIPMixin, TestCase):
         self.assertTrue(self.group_contains_ip(self.target_security_group, ip_to_check))
         self.assertTrue(ip_is_in_group(self.target_security_group, ip_to_check))
 
+    def test_ip_is_in_group_missing_values(self):
+        not_in_ip = '44.55.66.77'
+        in_ip='77.66.55.44'
+        missing_values_ip='77.66.55.44'
+        self.add_ips(self.target_security_group, [in_ip])
+        self.add_ips(self.target_security_group, [missing_values_ip], to_port=None, from_port=None, protocol=None)
+        self.assertFalse(ip_is_in_group(self.target_security_group, not_in_ip))
+        self.assertTrue(ip_is_in_group(self.target_security_group, missing_values_ip, port=None, protocol=None))
+
     def test_is_not_in_group(self):
         normal_ips = [
             '1.2.3.4',
@@ -127,6 +136,18 @@ class TestUtils(ManageIPMixin, TestCase):
         self.assertTrue(
             all(self.group_contains_ip(self.admin_security_group, ip) for ip in ignore_ips)
         )
+
+    def test_clear_ips_missing_values(self):
+        missing_values_ip='77.66.55.44'
+        all_ips = ['44.55.66.77', '55.66.77.88']
+        self.add_ips(self.target_security_group, all_ips)
+        self.add_ips(self.target_security_group, [missing_values_ip], to_port=None, from_port=None, protocol=None)
+        cleared_ips = clear_ips(self.target_security_group)
+        self.assertEqual(
+            sorted(all_ips),
+            sorted(cleared_ips)
+        )
+        self.assertTrue(ip_is_in_group(self.target_security_group, missing_values_ip, port=None, protocol=None))
 
     def test_clear_ips_ignore_ranges(self):
         all_ips = [

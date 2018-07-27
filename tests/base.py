@@ -61,17 +61,23 @@ class ManageIPMixin(object):
                 description = "Test IP"
             if '/' not in ip:
                 ip += '/32'
+            extra = {}
+            if to_port:
+                extra['ToPort'] = to_port
+            if from_port:
+                extra['FromPort'] = from_port
+            if protocol:
+                extra['IpProtocol'] = protocol
+            perm = {
+                'IpRanges': [{
+                    'CidrIp': ip,
+                    'Description': description
+                }]
+            }
+            perm.update(extra)
             self.client.authorize_security_group_ingress(
                 GroupId=group.group_id,
-                IpPermissions = [{
-                    'IpProtocol': protocol,
-                    'FromPort': from_port,
-                    'ToPort': to_port,
-                    'IpRanges': [{
-                        'CidrIp': ip,
-                        'Description': description
-                    }]
-                }]
+                IpPermissions = [perm]
             )
         group.reload()
 

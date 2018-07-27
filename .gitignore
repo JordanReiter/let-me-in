@@ -14,3 +14,5 @@ bin
 .tox
 lib64
 src
+venv
+zappa_settings.json
