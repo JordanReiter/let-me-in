@@ -78,7 +78,8 @@ def hello():
     if not auth.has_access(check_groups=ACCESS_GROUPS + ADMIN_GROUPS):
         return Response( "Not allowed.", status=403, mimetype="text/plain")
     ip_address = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
-    return render_template('hello.html', ip=ip_address)
+    in_group = ip_is_in_group(SECURITY_GROUP, ip_address)
+    return render_template('hello.html', ip=ip_address, in_group=in_group)
 
 @app.route('/goodbye/', methods=['GET', 'POST'])
 @app.route('/bye/', methods=['GET', 'POST'])

@@ -3,6 +3,14 @@
 {% block heading %}<h1>{% block title %}Hello{% endblock title %}</h1>{% endblock heading %}
 
 {% block content %}
+
+{% if in_group %}
+<h3>{{ ip }} currently has ssh access.</h3>
+<form class="container form" method="POST" action="{{ PREFIX }}/goodbye/">
+	<button class="btn btn-primary" type="submit">Remove access for {{ ip }}</button>
+</form>
+{% else %}
+
 <form method="POST" action="{{ PREFIX }}/knock/">
 	<p><button class="btn btn-success" type="submit">Add access for {{ ip }}</button></p>
 </form>
@@ -10,4 +18,5 @@
 <form method="POST" action="{{ PREFIX }}/clear/">
 	<p><button class="btn btn-danger" type="submit">Remove access for all IPs</button></p>
 </form>
+{% endif %}
 {% endblock content %}

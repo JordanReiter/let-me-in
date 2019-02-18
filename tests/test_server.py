@@ -56,6 +56,43 @@ class TestServer(ManageIPMixin, FlashTestingMixin, TestCase):
                 302
             )
 
+    def test_get_hello_logged_in(self):
+        client_ip = '12.34.56.78'
+        with self.app.test_client() as client:
+            with client.session_transaction() as session:
+                session['CAS_USERNAME'] = 'test-user'
+                session['cas-attributes'] = { 'cas:memberOf': [TEST_ACCESS_GROUP] }
+            response = client.get('/', environ_base={'REMOTE_ADDR': client_ip})
+            self.assertEqual(
+                response.status_code,
+                200
+            )
+            self.assertIn(
+                '<button class="btn btn-success" type="submit">'
+                'Add access for {}</button>'.format(client_ip),
+                response.data.decode()
+            )
+
+    def test_get_hello_logged_in_ip_in_group(self):
+        client_ip = '12.34.56.78'
+        self.add_ips(self.target_security_group, [client_ip])
+        with self.app.test_client() as client:
+            with client.session_transaction() as session:
+                session['CAS_USERNAME'] = 'test-user'
+                session['cas-attributes'] = { 'cas:memberOf': [TEST_ACCESS_GROUP] }
+            response = client.get('/', environ_base={'REMOTE_ADDR': client_ip})
+            self.assertEqual(
+                response.status_code,
+                200
+            )
+            self.assertIn(
+                '<h3>{ip} currently has ssh access.</h3> '
+                '<form class="container form" method="POST" action="/goodbye/"> '
+                '<button class="btn btn-primary" type="submit">Remove access for {ip}</button> '
+                '</form>'.format(ip=client_ip),
+                ' '.join(response.data.decode().split())
+            )
+
     def test_get_knock_not_logged_in(self):
         with self.app.test_client() as client:
             response = client.get('/knock/')
