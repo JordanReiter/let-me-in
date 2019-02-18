@@ -9,12 +9,15 @@ env:
 install:
   - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then pip install mock; fi
   - pip install -U pip
-  - pip install -r requirements.txt
   - pip install -r test-requirements.txt
 script:
-  - py.test --cov=./letmein ./tests
+  - export BOTO_CONFIG=/dev/null; py.test --cov=./letmein ./tests
 after_success:
   - coverage report
   - pip install --quiet python-coveralls
   - coveralls
-
+matrix:
+  include:
+    - python: 3.7
+      dist: xenial
+      sudo: true
