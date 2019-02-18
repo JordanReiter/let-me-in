@@ -154,6 +154,12 @@ class TestCASAuth(BaseAuthTestMixin, TestCase):
             ctx.session['cas-attributes'] = { 'cas:memberOf': ['user'] }
             self.assertFalse(self.auth.has_access(['admin']))
 
+    def test_has_access_user_attributes_no_group(self):
+        with self.app.test_request_context() as ctx:
+            ctx.session['CAS_USERNAME'] = 'test-user'
+            ctx.session['cas-attributes'] = {}
+            self.assertFalse(self.auth.has_access(['admin']))
+
     def test_has_access_user_attributes_right_group(self):
         with self.app.test_request_context() as ctx:
             ctx.session['CAS_USERNAME'] = 'test-user'
