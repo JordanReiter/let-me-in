@@ -1,5 +1,5 @@
 import os
-from unittest import TestCase
+from unittest import TestCase, skip
 
 try:
     from unittest import mock
@@ -249,6 +249,17 @@ class TestUtils(ManageIPMixin, TestCase):
         add_ip(self.target_security_group, ip_to_add)
         self.target_security_group.reload()
         self.admin_security_group.reload()
+        self.assertTrue(self.group_contains_ip(self.target_security_group, ip_to_add))
+        self.assertFalse(self.group_contains_ip(self.admin_security_group, ip_to_add))
+
+    @skip("moto doesn't support descriptions yet.")
+    def test_add_ip_description(self):
+        ip_to_add = '123.45.67.89'
+        description = 'Test description for {}'.format(ip_to_add)
+        add_ip(self.target_security_group, ip_to_add, description=description)
+        self.target_security_group.reload()
+        self.admin_security_group.reload()
+        print(list(self.target_security_group.ip_permissions))
         self.assertTrue(self.group_contains_ip(self.target_security_group, ip_to_add))
         self.assertFalse(self.group_contains_ip(self.admin_security_group, ip_to_add))
 
