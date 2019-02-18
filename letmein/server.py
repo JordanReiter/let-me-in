@@ -38,6 +38,7 @@ from .utils import add_ip, clear_ips, remove_ip, ip_is_in_group
 
 SecurityGroupRule = collections.namedtuple("SecurityGroupRule", ["ip_protocol", "from_port", "to_port", "cidr_ip", "src_group_name"])
 
+
 @app.context_processor
 def global_variables():
     return dict(
@@ -56,7 +57,8 @@ def knock():
     ip_address = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
     if request.method != 'POST':
         return render_template('knock.html', user=auth.user, cancel_url=CANCEL_URL,  ip=ip_address)
-    add_ip(SECURITY_GROUP, ip_address)
+    description = "{0} at {1:%F %T}".format(auth.user, datetime.datetime.now())
+    add_ip(SECURITY_GROUP, ip_address, description=description)
     return redirect(flask.request.script_root + '/knocked/')
 
 @app.route('/knocked/', methods=['GET'])

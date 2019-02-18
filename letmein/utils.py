@@ -86,7 +86,7 @@ def clear_ips(group, port=22, protocol='tcp'):
     return cleared_ips
 
 
-def add_ip(group, ip, port=22, protocol='tcp'):
+def add_ip(group, ip, port=22, protocol='tcp', description=None):
     try:
         group = group.group_name
     except AttributeError:
@@ -95,15 +95,16 @@ def add_ip(group, ip, port=22, protocol='tcp'):
     if '/' not in ip:
         ip += '/32'
     try:
+        range_data = {'CidrIp': ip }
+        if description:
+            range_data['Description'] = description
         ec2.authorize_security_group_ingress(
             GroupName=group,
             IpPermissions = [{
                 'IpProtocol': protocol,
                 'FromPort': port,
                 'ToPort': port,
-                'IpRanges': [{
-                    'CidrIp': ip
-                }]
+                'IpRanges': [range_data]
             }]
         )
     except ClientError as err:
